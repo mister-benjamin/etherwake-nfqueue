@@ -1,0 +1,10 @@
+Makefile
+build/
+*.o
+*.cbp
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+cmake-build-*/
+.idea/
+etherwake-nfqueue

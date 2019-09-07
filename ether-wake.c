@@ -1,12 +1,12 @@
-/* ether-wake.c: Send a magic packet to wake up sleeping machines. */
+/* etherwake-nfqueue.c: Send a magic packet to wake up sleeping machines. */
 
 static char version_msg[] =
-"ether-wake.c: v1.09 11/12/2003 Donald Becker, http://www.scyld.com/";
+"etherwake-nfqueue.c: v1.09-n1 based on v1.09 11/12/2003 Donald Becker, http://www.scyld.com/";
 static char brief_usage_msg[] =
-"usage: ether-wake [-i <ifname>] [-p aa:bb:cc:dd[:ee:ff]] 00:11:22:33:44:55\n"
+"usage: etherwake-nfqueue [-i <ifname>] [-p aa:bb:cc:dd[:ee:ff]] [-q <nfqueue_num>] 00:11:22:33:44:55\n"
 "   Use '-u' to see the complete set of options.\n";
 static char usage_msg[] =
-"usage: ether-wake [-i <ifname>] [-p aa:bb:cc:dd[:ee:ff]] 00:11:22:33:44:55\n"
+"usage: etherwake-nfqueue [-i <ifname>] [-p aa:bb:cc:dd[:ee:ff]] [-q <nfqueue_num>] 00:11:22:33:44:55\n"
 "\n"
 "	This program generates and transmits a Wake-On-LAN (WOL)\n"
 "	\"Magic Packet\", used for restarting machines that have been\n"
@@ -28,7 +28,9 @@ static char usage_msg[] =
 "					The password may be specified in ethernet hex format\n"
 "					or dotted decimal (Internet address)\n"
 "		-p 00:22:44:66:88:aa\n"
-"		-p 192.168.1.1\n";
+"		-p 192.168.1.1\n"
+"		-q 0		Send wake-up packet when any packet was received\n"
+"				in the specified NFQUEUE\n";
 
 /*
 	This program generates and transmits a Wake-On-LAN (WOL) "Magic Packet",
@@ -49,6 +51,9 @@ static char usage_msg[] =
 	 914 Bay Ridge Road, Suite 220
 	 Annapolis MD 21403
 
+	This source file was modified to support NFQUEUE hooks.
+	Copyright (C) 2019 Mister Benjamin <144dbspl@gmail.com>
+
   Notes:
   On some systems dropping root capability allows the process to be
   dumped, traced or debugged.
@@ -62,6 +67,7 @@ static char usage_msg[] =
 
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 
@@ -74,6 +80,8 @@ static char usage_msg[] =
 #include <netpacket/packet.h>
 #include <net/ethernet.h>
 #include <netinet/ether.h>
+
+#include "nfqueue.h"
 
 u_char outpack[1000];
 int pktsize;
@@ -90,27 +98,33 @@ u_char wol_passwd[6];
 int wol_passwd_sz = 0;
 
 static int opt_no_src_addr = 0, opt_broadcast = 0;
+static int opt_nfqueue_num = -1;
 
 static int send_magic_packet();
 static int get_dest_addr(const char *arg, struct ether_addr *eaddr);
 static int get_fill(unsigned char *pkt, struct ether_addr *eaddr);
 static int get_wol_pw(const char *optarg);
+static int get_nfqueue_num(const char *optarg);
 
 int main(int argc, char *argv[])
 {
 	char *ifname = "eth0";
 	int one = 1;				/* True, for socket options. */
-	int errflag = 0, verbose = 0, do_version = 0;
+	int errflag = 0, nfqueue_errflag = 0, verbose = 0, do_version = 0;
 	int perm_failure = 0;
 	int i, c;
 	struct ether_addr eaddr;
 
-	while ((c = getopt(argc, argv, "bDi:p:uvV")) != -1)
+	while ((c = getopt(argc, argv, "bDi:p:q:uvV")) != -1)
 		switch (c) {
 		case 'b': opt_broadcast++;	break;
 		case 'D': debug++;			break;
 		case 'i': ifname = optarg;	break;
 		case 'p': get_wol_pw(optarg); break;
+		case 'q':
+			if (get_nfqueue_num(optarg) < 0)
+				nfqueue_errflag++;
+			break;
 		case 'u': printf("%s", usage_msg); return 0;
 		case 'v': verbose++;		break;
 		case 'V': do_version++;		break;
@@ -123,7 +137,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"%s", brief_usage_msg);
 		return 3;
 	}
-
+	if (nfqueue_errflag) {
+		fprintf(stderr, "The '-q' option needs a value between 0 and 65535\n");
+		return 3;
+	}
 	if (optind == argc) {
 		fprintf(stderr, "Specify the Ethernet address as 00:11:22:33:44:55.\n");
 		return 3;
@@ -139,9 +156,9 @@ int main(int argc, char *argv[])
 #endif
 	if (s < 0) {
 		if (errno == EPERM)
-			fprintf(stderr, "ether-wake: This program must be run as root.\n");
+			fprintf(stderr, "etherwake-nfqueue: This program must be run as root.\n");
 		else
-			perror("ether-wake: socket");
+			perror("etherwake-nfqueue: socket");
 		perm_failure++;
 	}
 	/* Don't revert if debugging allows a normal user to get the raw socket. */
@@ -220,7 +237,12 @@ int main(int argc, char *argv[])
 	strcpy(whereto.sa_data, ifname);
 #endif
 
-	return send_magic_packet();
+	if (opt_nfqueue_num < 0)
+		return send_magic_packet();
+
+	if (verbose || debug)
+		printf("Acting on packets in NFQUEUE %d\n", opt_nfqueue_num);
+	return nfqueue_receive(opt_nfqueue_num, send_magic_packet);
 }
 
 static int send_magic_packet()
@@ -282,7 +304,7 @@ static int get_dest_addr(const char *hostid, struct ether_addr *eaddr)
 					hostid, ether_ntoa(eaddr));
 	} else {
 		(void)fprintf(stderr,
-					  "ether-wake: The Magic Packet host address must be "
+					  "etherwake-nfqueue: The Magic Packet host address must be "
 					  "specified as\n"
 					  "  - a station address, 00:11:22:33:44:55, or\n"
 					  "  - a hostname with a known 'ethers' entry.\n");
@@ -343,4 +365,19 @@ static int get_wol_pw(const char *optarg)
 	for (i = 0; i < byte_cnt; i++)
 		wol_passwd[i] = passwd[i];
 	return wol_passwd_sz = byte_cnt;
+}
+
+static int get_nfqueue_num(const char *optarg)
+{
+	char *endptr;
+	unsigned long val;
+
+	errno = 0;
+	val = strtoul(optarg, &endptr, 10);
+
+	if (errno != 0 || val > UINT16_MAX || endptr == optarg || *endptr != '\0') {
+		return -1;
+	}
+
+	return opt_nfqueue_num = (int)val;
 }
