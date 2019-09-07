@@ -59,17 +59,11 @@ static char usage_msg[] =
   doing so only works with adapters configured for unicast+broadcast Rx
   filter.  That configuration consumes more power.
 */
-
+
 #include <unistd.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include <ctype.h>
 #include <string.h>
-
-#if 0							/* Only exists on some versions. */
-#include <ioctls.h>
-#endif
 
 #include <sys/socket.h>
 
@@ -77,23 +71,11 @@ static char usage_msg[] =
 #include <sys/ioctl.h>
 #include <linux/if.h>
 
-#include <features.h>
 #include <netpacket/packet.h>
 #include <net/ethernet.h>
-#include <netdb.h>
 #include <netinet/ether.h>
 
-/* Grrr, no consistency between include versions.
-   Enable this if setsockopt() isn't declared with your library. */
-#if 0
-extern int setsockopt __P ((int __fd, int __level, int __optname,
-							__ptr_t __optval, int __optlen));
-#else				/* New, correct head files.  */
-#include <sys/socket.h>
-#endif
-
 u_char outpack[1000];
-int outpack_sz = 0;
 int debug = 0;
 u_char wol_passwd[6];
 int wol_passwd_sz = 0;
@@ -351,36 +333,3 @@ static int get_wol_pw(const char *optarg)
 		wol_passwd[i] = passwd[i];
 	return wol_passwd_sz = byte_cnt;
 }
-
-#if 0
-{
-	to = (struct sockaddr_in *)&whereto;
-	to->sin_family = AF_INET;
-	if (inet_aton(target, &to->sin_addr)) {
-		hostname = target;
-	}
-	memset (&sa, 0, sizeof sa);
-	sa.sa_family = AF_INET;
-	strncpy (sa.sa_data, interface, sizeof sa.sa_data);
-	sendto (sock, buf, bufix + len, 0, &sa, sizeof sa);
-	strncpy (sa.sa_data, interface, sizeof sa.sa_data);
-#if 1
-	sendto (sock, buf, bufix + len, 0, &sa, sizeof sa);
-#else
-	bind (sock, &sa, sizeof sa);
-	connect();
-	send (sock, buf, bufix + len, 0);
-#endif
-}
-#endif
-
-
-/*
- * Local variables:
- *  compile-command: "gcc -O -Wall -o ether-wake ether-wake.c"
- *  c-indent-level: 4
- *  c-basic-offset: 4
- *  c-indent-level: 4
- *  tab-width: 4
- * End:
- */
