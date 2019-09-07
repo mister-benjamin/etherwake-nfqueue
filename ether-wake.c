@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 		case 'D': debug++;			break;
 		case 'i': ifname = optarg;	break;
 		case 'p': get_wol_pw(optarg); break;
-		case 'u': printf("%s",usage_msg); return 0;
+		case 'u': printf("%s", usage_msg); return 0;
 		case 'v': verbose++;		break;
 		case 'V': do_version++;		break;
 		case '?':
