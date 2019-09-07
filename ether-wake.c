@@ -76,12 +76,22 @@ static char usage_msg[] =
 #include <netinet/ether.h>
 
 u_char outpack[1000];
+int pktsize;
+int s;				/* raw socket */
+
+#if defined(PF_PACKET)
+struct sockaddr_ll whereto;
+#else
+struct sockaddr whereto;	/* who to wake up */
+#endif
+
 int debug = 0;
 u_char wol_passwd[6];
 int wol_passwd_sz = 0;
 
 static int opt_no_src_addr = 0, opt_broadcast = 0;
 
+static int send_magic_packet();
 static int get_dest_addr(const char *arg, struct ether_addr *eaddr);
 static int get_fill(unsigned char *pkt, struct ether_addr *eaddr);
 static int get_wol_pw(const char *optarg);
@@ -90,15 +100,9 @@ int main(int argc, char *argv[])
 {
 	char *ifname = "eth0";
 	int one = 1;				/* True, for socket options. */
-	int s;						/* Raw socket */
 	int errflag = 0, verbose = 0, do_version = 0;
 	int perm_failure = 0;
-	int i, c, pktsize;
-#if defined(PF_PACKET)
-	struct sockaddr_ll whereto;
-#else
-	struct sockaddr whereto;	/* who to wake up */
-#endif
+	int i, c;
 	struct ether_addr eaddr;
 
 	while ((c = getopt(argc, argv, "bDi:p:uvV")) != -1)
@@ -215,6 +219,13 @@ int main(int argc, char *argv[])
 	whereto.sa_family = 0;
 	strcpy(whereto.sa_data, ifname);
 #endif
+
+	return send_magic_packet();
+}
+
+static int send_magic_packet()
+{
+	int i;
 
 	if ((i = sendto(s, outpack, pktsize, 0, (struct sockaddr *)&whereto,
 					sizeof(whereto))) < 0)
