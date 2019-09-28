@@ -117,7 +117,7 @@ which we want to wake up is offline, as the ARP requests for the destination
 IP address are not answered and thus the client trying to reach out to its
 destination will not send any *network layer* packets. We could use *arptables*
 instead to wake the host when someone requests its MAC address, but this
-would probably happen to often and no fine-grained control would be possible.
+would probably happen too often and no fine-grained control would be possible.
 
 As a workaround, it might be possible to configure a static ARP entry on your
 router (untested), e.g. with:
