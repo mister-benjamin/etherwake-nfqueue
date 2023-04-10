@@ -7,6 +7,6 @@ add_executable(etherwake-nfqueue
         ether-wake.c
         nfqueue.c nfqueue.h)
 
-target_link_libraries(etherwake-nfqueue netfilter_queue)
+target_link_libraries(etherwake-nfqueue netfilter_queue mnl)
 
 install(TARGETS etherwake-nfqueue DESTINATION bin)
