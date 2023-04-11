@@ -88,7 +88,7 @@ int nfqueue_receive(uint16_t queue_num, int (*callback)())
 		puts("Listening for packages");
 
 	for (;;) {
-		ret = mnl_socket_recvfrom(nl, buf, sizeof_buf);
+		ret = mnl_socket_recvfrom(nl, buf, BUFFER_SIZE);
 		if (ret == -1) {
 			fprintf(stderr, "mnl_socket_recvfrom\n");
 			return (EXIT_FAILURE);
