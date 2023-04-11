@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 	int one = 1;				/* True, for socket options. */
 	int errflag = 0, nfqueue_errflag = 0, verbose = 0, do_version = 0;
 	int perm_failure = 0;
-	int i, c;
+	int i, c, ret;
 	struct ether_addr eaddr;
 
 	while ((c = getopt(argc, argv, "bDi:p:q:uvV")) != -1)
@@ -251,7 +251,11 @@ int main(int argc, char *argv[])
 
 	if (verbose || debug)
 		printf("Acting on packets in NFQUEUE %d\n", opt_nfqueue_num);
-	return nfqueue_receive(opt_nfqueue_num, send_magic_packet);
+
+	ret = nfqueue_receive(opt_nfqueue_num, send_magic_packet);
+
+	free_ping_argv();
+	return ret;
 }
 
 static int send_magic_packet()

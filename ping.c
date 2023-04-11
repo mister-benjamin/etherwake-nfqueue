@@ -3,10 +3,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <string.h>
 
 #define TIMEOUT 10
 
-static char *ping_argv[8];
+static char *ping_argv[9];
 
 static int execute_ping()
 {
@@ -53,13 +54,7 @@ void generate_ping_argv(const char *ip_address, const char *ifname)
 	const char *ping_arguments[] = {
 		"/bin/ping", "-c", "1", "-W", "1", "-I", ifname, ip_address
 	};
-	const int argument_count =
-		sizeof(ping_arguments) / sizeof(ping_arguments[0]);
-	ping_argv = calloc(argument_count + 1, sizeof(char *));
-	if (!ping_argv) {
-		perror("malloc() ping arguments");
-		exit(EXIT_FAILURE);
-	}
+	const int argument_count = sizeof(ping_argv) / sizeof(ping_argv[0]) - 1;
 
 	for (int array_index = 0; array_index < argument_count; array_index++) {
 		char *str_cpy = strdup(ping_arguments[array_index]);
@@ -69,5 +64,14 @@ void generate_ping_argv(const char *ip_address, const char *ifname)
 			perror("malloc() ping argument");
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	ping_argv[8] = NULL;
+}
+
+void free_ping_argv()
+{
+	for (int i = 0; i < sizeof(ping_argv) / sizeof(ping_argv[0]); i++) {
+		free(ping_argv[i]);
 	}
 }

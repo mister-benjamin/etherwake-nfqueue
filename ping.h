@@ -3,5 +3,6 @@
 
 void wait_for_online();
 void generate_ping_argv(const char *ip_address, const char *ifname);
+void free_ping_argv();
 
 #endif //ETHERWAKE_NFQUEUE_PING_H
