@@ -5,9 +5,9 @@
 #include <sys/wait.h>
 #include <string.h>
 
-#define TIMEOUT 10
+#define TIMEOUT 60
 
-static char *ping_argv[9];
+static char **ping_argv;
 
 static int execute_ping()
 {
@@ -35,12 +35,11 @@ void wait_for_online()
 {
 	static time_t last_time = -1;
 	time_t current_time = time(NULL);
-	int recent = current_time != -1 &&
-		     difftime(current_time, last_time) < 60;
+	int recent =
+		current_time != -1 && difftime(current_time, last_time) < 60;
 	if (!recent) {
 		int ping_ret = -1;
-		for (int ping_count = 0;
-		     ping_count < TIMEOUT && ping_ret != 0;
+		for (int ping_count = 0; ping_count < TIMEOUT && ping_ret != 0;
 		     ping_count++) {
 			ping_ret = execute_ping();
 		}
@@ -54,9 +53,11 @@ void generate_ping_argv(const char *ip_address, const char *ifname)
 	const char *ping_arguments[] = {
 		"/bin/ping", "-c", "1", "-W", "1", "-I", ifname, ip_address
 	};
-	const int argument_count = sizeof(ping_argv) / sizeof(ping_argv[0]) - 1;
+	const int argument_count =
+		sizeof(ping_arguments) / sizeof(ping_arguments[0]);
+	ping_argv = calloc(argument_count + 1, sizeof(char *));
 
-	for (int array_index = 0; array_index < argument_count; array_index++) {
+	for (int array_index = 0; array_index < argument_count; ++array_index) {
 		char *str_cpy = strdup(ping_arguments[array_index]);
 		if (str_cpy) {
 			ping_argv[array_index] = str_cpy;
@@ -66,12 +67,14 @@ void generate_ping_argv(const char *ip_address, const char *ifname)
 		}
 	}
 
-	ping_argv[8] = NULL;
+	ping_argv[argument_count] = NULL;
 }
 
 void free_ping_argv()
 {
-	for (int i = 0; i < sizeof(ping_argv) / sizeof(ping_argv[0]); i++) {
+	for (int i = 0; ping_argv[i] != NULL; ++i) {
 		free(ping_argv[i]);
 	}
+
+	free(ping_argv);
 }

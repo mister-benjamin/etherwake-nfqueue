@@ -23,7 +23,7 @@ static char usage_msg[] =
 "		-b	Send wake-up packet to the broadcast address.\n"
 "		-D	Increase the debug level.\n"
 "		-i ifname	Use interface IFNAME instead of the default 'eth0'.\n"
-"		-h ipaddress	Hold packages back until host with ip address is reachable.\n"
+"		-h ipaddress	Hold packages back until host with IPADDRESS responds to a ping.\n"
 "		-p <pw>		Append the four or six byte password PW to the packet.\n"
 "					A password is only required for a few adapter types.\n"
 "					The password may be specified in ethernet hex format\n"
