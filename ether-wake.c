@@ -82,7 +82,7 @@ static char usage_msg[] =
 #include <netinet/ether.h>
 
 #include "nfqueue.h"
-#include "ping.h"
+#include "hold.h"
 
 u_char outpack[1000];
 int pktsize;
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (hold) {
-		generate_ping_argv(ip_address, ifname);
+		setup_hold(ip_address);
 	}
 
 	/* This is necessary for broadcasts to work */
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 
 	ret = nfqueue_receive(opt_nfqueue_num, send_magic_packet);
 
-	free_ping_argv();
+	cleanup_hold();
 	return ret;
 }
 
@@ -293,7 +293,7 @@ static int send_magic_packet()
 
 	// Wait until host is reachable again
 	if (hold) {
-		wait_for_online();
+		hold_for_online();
 	}
 
 	return 0;

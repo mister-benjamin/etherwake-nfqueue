@@ -5,7 +5,9 @@ set(CMAKE_C_STANDARD 99)
 
 add_executable(etherwake-nfqueue
         ether-wake.c
-        nfqueue.c ping.c)
+        nfqueue.c
+        hold.c
+        ping.c)
 
 target_link_libraries(etherwake-nfqueue netfilter_queue mnl)
 

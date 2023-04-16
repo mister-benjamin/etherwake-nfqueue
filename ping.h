@@ -1,8 +1,8 @@
 #ifndef ETHERWAKE_NFQUEUE_PING_H
 #define ETHERWAKE_NFQUEUE_PING_H
 
-void wait_for_online();
-void generate_ping_argv(const char *ip_address, const char *ifname);
-void free_ping_argv();
+int setup_ping(const char *hostname);
+int send_ping();
+int cleanup_ping();
 
 #endif //ETHERWAKE_NFQUEUE_PING_H

@@ -4,11 +4,11 @@
 ## Wake up computers on netfilter match
 
 **etherwake-nfqueue** is a fork of the **etherwake** Wake-on-LAN client,
-with support to send magic packets only after a queued packet is received
+with support to send magic packets only after a queued send_packet is received
 from the Linux *nfnetlink_queue* subsystem.
 
 When running **etherwake-nfqueue** on a residential gateway or other type of
-router, it can wake up hosts on its network based on packet filtering rules.
+router, it can wake up hosts on its network based on send_packet filtering rules.
 
 For instance, when your set-top box wants to record a TV programme and
 tries to access a network share on your NAS, which is in sleep or standby mode,
@@ -54,13 +54,13 @@ sudo make install
 **etherwake-nfqueue** has all the command line options of *etherwake*.
 It adds the *-q <nfqueue_num>* option. Without that option,
 **etherwake-nfqueue** behaves just like **etherwake** and immediately sends
-out a magic packet when started. When using the *-q <nfqueue_num>* option,
-**etherwake-nfqueue** waits for packet metadata to be received from the
+out a magic send_packet when started. When using the *-q <nfqueue_num>* option,
+**etherwake-nfqueue** waits for send_packet metadata to be received from the
 *nfnetlink_queue* identified by the *-q* option's argument *nfqueue_num*.
 Values between 0 and 65535 are accepted.
 
 The idea is that you set up filtering rules with *iptables* with the *NFQUEUE*
-target, which will tell the kernel to add a matched packet to the
+target, which will tell the kernel to add a matched send_packet to the
 corresponding queue.
 
 As an example, if you would want to wake up **Host A** with MAC address
@@ -87,10 +87,10 @@ iptables --insert FORWARD\
          --jump NFQUEUE --queue-num 0 --queue-bypass
 ```
 
-The rule basically states, that whenever a TCP packet is forwarded to
+The rule basically states, that whenever a TCP send_packet is forwarded to
 192.168.0.10 with destination port 80 or 443, it should be added to NFQUEUE
 number 0. *conntrack* and *limit* are used to limit matches to new connections
-and only consider roughly one packet per 20 minutes. These options could be
+and only consider roughly one send_packet per 20 minutes. These options could be
 left out for testing or tweaked to your needs. The *--queue-bypass* option
 helps in the situation, when **etherwake-nfqueue** isn't running. Packets will
 then be handled as if the rule wasn't present.
@@ -175,8 +175,8 @@ cat /proc/net/netfilter/nfnetlink_queue
 * Alternatively, when holding back packets is not desired and the connection to
   the host should have the least possible jitter at all times, verdicts
   should be issued right away and sending the magic packets should happen in a
-  different thread. In this case, it might be better to only look at the packet
-  counters and don't send packet metadata to userspace.
+  different thread. In this case, it might be better to only look at the send_packet
+  counters and don't send send_packet metadata to userspace.
 * **etherwake-nfqueue** uses deprecated parts of the *libnetfilter_queue* API,
   its implementation should be updated to use the library like in this
   [example](http://git.netfilter.org/libnetfilter_queue/tree/examples/nf-queue.c).
