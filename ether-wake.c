@@ -254,7 +254,8 @@ int main(int argc, char *argv[])
 
 	ret = nfqueue_receive(opt_nfqueue_num, send_magic_packet);
 
-	cleanup_hold();
+	if (hold)
+		cleanup_hold();
 	return ret;
 }
 
