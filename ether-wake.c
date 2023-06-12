@@ -23,7 +23,7 @@ static char usage_msg[] =
 "		-b	Send wake-up packet to the broadcast address.\n"
 "		-D	Increase the debug level.\n"
 "		-i ifname	Use interface IFNAME instead of the default 'eth0'.\n"
-"		-h ipaddress	Hold packages back until host with IPADDRESS responds to a ping.\n"
+"		-d ipaddress	Defer delivery of matched packages until host with IPADDRESS responds to a ping i.e. has woken up.\n"
 "		-p <pw>		Append the four or six byte password PW to the packet.\n"
 "					A password is only required for a few adapter types.\n"
 "					The password may be specified in ethernet hex format\n"
@@ -104,6 +104,7 @@ static int opt_no_src_addr = 0, opt_broadcast = 0;
 static int opt_nfqueue_num = -1;
 
 static int send_magic_packet();
+static int send_deferred_magic_packet();
 static int get_dest_addr(const char *arg, struct ether_addr *eaddr);
 static int get_fill(unsigned char *pkt, struct ether_addr *eaddr);
 static int get_wol_pw(const char *optarg);
@@ -118,6 +119,7 @@ int main(int argc, char *argv[])
 	int perm_failure = 0;
 	int i, c, ret;
 	struct ether_addr eaddr;
+	int(*send_function)() = &send_magic_packet;
 
 	while ((c = getopt(argc, argv, "bDi:p:q:uvV")) != -1)
 		switch (c) {
@@ -216,6 +218,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (hold) {
+		send_function = &send_deferred_magic_packet;
 		setup_hold(ip_address);
 	}
 
@@ -247,12 +250,12 @@ int main(int argc, char *argv[])
 #endif
 
 	if (opt_nfqueue_num < 0)
-		return send_magic_packet();
+		return send_function();
 
 	if (verbose || debug)
 		printf("Acting on packets in NFQUEUE %d\n", opt_nfqueue_num);
 
-	ret = nfqueue_receive(opt_nfqueue_num, send_magic_packet);
+	ret = nfqueue_receive(opt_nfqueue_num, send_function);
 
 	if (hold)
 		cleanup_hold();
@@ -292,11 +295,13 @@ static int send_magic_packet()
 	}
 #endif
 
-	// Wait until host is reachable again
-	if (hold) {
-		hold_for_online();
-	}
+	return 0;
+}
 
+static int send_deferred_magic_packet()
+{
+	send_magic_packet();
+	hold_for_online();
 	return 0;
 }
 
