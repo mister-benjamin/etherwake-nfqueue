@@ -219,7 +219,10 @@ int main(int argc, char *argv[])
 
 	if (hold) {
 		send_function = &send_deferred_magic_packet;
-		setup_hold(ip_address);
+		if (setup_hold(ip_address) == 0) {
+			fprintf(stderr, "Failed setting up defer mechanism");
+			return 1;
+		}
 	}
 
 	/* This is necessary for broadcasts to work */

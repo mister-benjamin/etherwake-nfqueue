@@ -139,8 +139,11 @@ int setup_ping(const char *hostname)
 		return false;
 	}
 
-	if (!create_icmp_socket())
+	if (!create_icmp_socket()) {
+		fprintf(stderr,
+			"Failed creating ICMP socket?\n");
 		return false;
+	}
 
 	process_pid = htons(getpid());
 

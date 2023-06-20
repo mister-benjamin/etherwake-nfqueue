@@ -22,9 +22,9 @@ void hold_for_online()
 	last_time = current_time;
 }
 
-void setup_hold(const char *hostname)
+int setup_hold(const char *hostname)
 {
-	setup_ping(hostname);
+	return setup_ping(hostname);
 }
 
 void cleanup_hold()
