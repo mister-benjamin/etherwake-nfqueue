@@ -23,6 +23,8 @@ static char usage_msg[] =
 "		-b	Send wake-up packet to the broadcast address.\n"
 "		-D	Increase the debug level.\n"
 "		-i ifname	Use interface IFNAME instead of the default 'eth0'.\n"
+"		-d ipaddress	Defer delivery of matched packets until host with IPADDRESS\n"
+"				responds to a ping i.e. has woken up.\n"
 "		-p <pw>		Append the four or six byte password PW to the packet.\n"
 "					A password is only required for a few adapter types.\n"
 "					The password may be specified in ethernet hex format\n"
@@ -73,7 +75,6 @@ static char usage_msg[] =
 
 #include <sys/socket.h>
 
-#include <sys/types.h>
 #include <sys/ioctl.h>
 #include <linux/if.h>
 
@@ -82,6 +83,7 @@ static char usage_msg[] =
 #include <netinet/ether.h>
 
 #include "nfqueue.h"
+#include "hold.h"
 
 u_char outpack[1000];
 int pktsize;
@@ -97,10 +99,13 @@ int debug = 0;
 u_char wol_passwd[6];
 int wol_passwd_sz = 0;
 
+static int hold = 0;
+
 static int opt_no_src_addr = 0, opt_broadcast = 0;
 static int opt_nfqueue_num = -1;
 
 static int send_magic_packet();
+static int send_magic_packet_wait_online();
 static int get_dest_addr(const char *arg, struct ether_addr *eaddr);
 static int get_fill(unsigned char *pkt, struct ether_addr *eaddr);
 static int get_wol_pw(const char *optarg);
@@ -109,17 +114,20 @@ static int get_nfqueue_num(const char *optarg);
 int main(int argc, char *argv[])
 {
 	char *ifname = "eth0";
+	char *ip_address;
 	int one = 1;				/* True, for socket options. */
 	int errflag = 0, nfqueue_errflag = 0, verbose = 0, do_version = 0;
 	int perm_failure = 0;
-	int i, c;
+	int i, c, ret;
 	struct ether_addr eaddr;
+	int(*send_function)() = &send_magic_packet;
 
-	while ((c = getopt(argc, argv, "bDi:p:q:uvV")) != -1)
+	while ((c = getopt(argc, argv, "bDi:d:p:q:uvV")) != -1)
 		switch (c) {
 		case 'b': opt_broadcast++;	break;
 		case 'D': debug++;			break;
 		case 'i': ifname = optarg;	break;
+		case 'd': hold++; ip_address = optarg; break;
 		case 'p': get_wol_pw(optarg); break;
 		case 'q':
 			if (get_nfqueue_num(optarg) < 0)
@@ -210,6 +218,14 @@ int main(int argc, char *argv[])
 		printf(".\n");
 	}
 
+	if (hold) {
+		send_function = &send_magic_packet_wait_online;
+		if (setup_hold(ip_address) == 0) {
+			fprintf(stderr, "Failed setting up defer mechanism");
+			return 1;
+		}
+	}
+
 	/* This is necessary for broadcasts to work */
 	if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&one, sizeof(one)) < 0)
 		perror("setsockopt: SO_BROADCAST");
@@ -238,11 +254,16 @@ int main(int argc, char *argv[])
 #endif
 
 	if (opt_nfqueue_num < 0)
-		return send_magic_packet();
+		return send_function();
 
 	if (verbose || debug)
 		printf("Acting on packets in NFQUEUE %d\n", opt_nfqueue_num);
-	return nfqueue_receive(opt_nfqueue_num, send_magic_packet);
+
+	ret = nfqueue_receive(opt_nfqueue_num, send_function);
+
+	if (hold)
+		cleanup_hold();
+	return ret;
 }
 
 static int send_magic_packet()
@@ -278,6 +299,13 @@ static int send_magic_packet()
 	}
 #endif
 
+	return 0;
+}
+
+static int send_magic_packet_wait_online()
+{
+	send_magic_packet();
+	hold_for_online();
 	return 0;
 }
 
