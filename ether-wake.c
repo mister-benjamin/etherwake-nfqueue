@@ -105,7 +105,7 @@ static int opt_no_src_addr = 0, opt_broadcast = 0;
 static int opt_nfqueue_num = -1;
 
 static int send_magic_packet();
-static int send_deferred_magic_packet();
+static int send_magic_packet_wait_online();
 static int get_dest_addr(const char *arg, struct ether_addr *eaddr);
 static int get_fill(unsigned char *pkt, struct ether_addr *eaddr);
 static int get_wol_pw(const char *optarg);
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (hold) {
-		send_function = &send_deferred_magic_packet;
+		send_function = &send_magic_packet_wait_online;
 		if (setup_hold(ip_address) == 0) {
 			fprintf(stderr, "Failed setting up defer mechanism");
 			return 1;
@@ -302,7 +302,7 @@ static int send_magic_packet()
 	return 0;
 }
 
-static int send_deferred_magic_packet()
+static int send_magic_packet_wait_online()
 {
 	send_magic_packet();
 	hold_for_online();
