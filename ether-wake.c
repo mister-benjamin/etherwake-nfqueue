@@ -121,12 +121,12 @@ int main(int argc, char *argv[])
 	struct ether_addr eaddr;
 	int(*send_function)() = &send_magic_packet;
 
-	while ((c = getopt(argc, argv, "bDi:p:q:uvV")) != -1)
+	while ((c = getopt(argc, argv, "bDi:d:p:q:uvV")) != -1)
 		switch (c) {
 		case 'b': opt_broadcast++;	break;
 		case 'D': debug++;			break;
 		case 'i': ifname = optarg;	break;
-		case 'h': hold++; ip_address = optarg; break;
+		case 'd': hold++; ip_address = optarg; break;
 		case 'p': get_wol_pw(optarg); break;
 		case 'q':
 			if (get_nfqueue_num(optarg) < 0)
